@@ -11,6 +11,7 @@
 #include <QSqlQueryModel>
 #include <QStackedWidget>
 #include <QGridLayout>
+#include <QVBoxLayout>
 #include <QFile>
 #include <QSqlDatabase>
 #include <QSqlQuery>
@@ -20,7 +21,8 @@
 #include <QModelIndexList>
 #include <QModelIndex>
 #include <QSqlError>
-
+#include <QFrame>
+#include <QDoubleSpinBox>
 #include <QDebug>
 
 class CARDVIPLIBSHARED_EXPORT CardVIPLib : public QWidget
@@ -30,9 +32,11 @@ public:
     explicit CardVIPLib(QWidget *parent = nullptr);
     bool initConnectDatabase(QString dbDriverErp,QString dbFilePathErp,QString dbUserNameErp,QString dbPasswordErp,QString dbHostNameErp,int portErp,
                              QString dbDriverVtp,QString dbFilePathVtp,QString dbUserNameVtp,QString dbPasswordVtp,QString dbHostNameVtp,int portVtp,
-                             double total);
+                             QString orderID);
 
     double getBalanceByCardID(QString CardID);
+    double getCreditAmountByOrderID(QString orderID);
+    void getCardPromoTypeByCardID(QString CardID);
     ~CardVIPLib();
 
 private slots:
@@ -60,6 +64,12 @@ private:
     QPushButton *m_pPushButtonTotal;
     QPushButton *m_pPushButtonPoint;
 
+    QFrame *m_pFrame;
+    QLabel *m_pLabelPromoTitle;
+    QPushButton *m_pPushButtonUseBalance;
+    QDoubleSpinBox *m_pDoubleSpinBox;
+    QPushButton *m_pPushButtonPaymentConfirm;
+
     //Layout
     QStackedWidget *m_pStackedWidget;
 
@@ -72,11 +82,14 @@ private:
     QString m_sCustomerName;
     QString m_sCustomerRef;
     QString m_sCustomerTel;
+    QString m_sOrderID;
     double m_dCardBalance;
     double m_dCardCreditAmount;
     double m_dTotal;
+    double m_dCardPoint;
 
-    QString m_sOrderID;
+    QString m_sCardPromoType;
+    double m_dCardAmount;
 
 };
 

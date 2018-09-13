@@ -15,6 +15,8 @@ CardVIPLib::CardVIPLib(QWidget *parent) : QWidget(parent)
     m_pPushButtonConfirmedVIPCard->setText(QStringLiteral("确定"));
     m_pPushButtonConfirmedVIPCard->setEnabled(false);
 
+    qDebug() << m_pTableViewVIPCard->sizePolicy();
+
     //The layout of the search
     QGridLayout *pGridLayoutSearchVIPCard = new QGridLayout();
     m_pLabel->setText(QStringLiteral("请输入卡号或者客户信息 : "));
@@ -48,13 +50,36 @@ CardVIPLib::CardVIPLib(QWidget *parent) : QWidget(parent)
     pGridLayoutShowVIPCard->addWidget(m_pLabelShowCustomerName,1,0,1,1);
     pGridLayoutShowVIPCard->addWidget(m_pLabelShowCustomerRef,2,0,1,1);
     pGridLayoutShowVIPCard->addWidget(m_pLabelShowCustomerTel,3,0,1,1);
-    pGridLayoutShowVIPCard->addWidget(m_pPushButtonBalance,4,0);
-    pGridLayoutShowVIPCard->addWidget(m_pPushButtonCreditAmount,4,1);
-    pGridLayoutShowVIPCard->addWidget(m_pPushButtonPoint,5,0);
-    pGridLayoutShowVIPCard->addWidget(m_pPushButtonTotal,5,1);
-    pGridLayoutShowVIPCard->setHorizontalSpacing(10);
-    pGridLayoutShowVIPCard->setVerticalSpacing(10);
-    pGridLayoutShowVIPCard->setContentsMargins(10,10,10,10);
+    pGridLayoutShowVIPCard->addWidget(m_pPushButtonTotal,4,0,1,2);
+    pGridLayoutShowVIPCard->addWidget(m_pPushButtonBalance,5,0);
+    pGridLayoutShowVIPCard->addWidget(m_pPushButtonCreditAmount,5,1);
+
+    m_pLabelPromoTitle = new QLabel();
+    m_pLabelPromoTitle->setText(QStringLiteral("折扣类型 : 无"));
+    m_pFrame = new QFrame();
+    QVBoxLayout *pVBoxLayout = new QVBoxLayout();
+    pVBoxLayout->addWidget(m_pLabelPromoTitle);
+    pVBoxLayout->addWidget(m_pPushButtonPoint);
+    m_pFrame->setLayout(pVBoxLayout);
+    m_pFrame->setFrameShape(QFrame::Box);
+    m_pFrame->setObjectName("frame");
+    m_pFrame->setStyleSheet("#frame {border:1px solid rgb(255,0,0)}");
+    pGridLayoutShowVIPCard->addWidget(m_pFrame,6,0,2,2);
+
+    m_pPushButtonUseBalance = new QPushButton();
+    m_pPushButtonUseBalance->setText(QStringLiteral("使用会员卡积分 : "));
+    pGridLayoutShowVIPCard->addWidget(m_pPushButtonUseBalance,8,0);
+
+    m_pDoubleSpinBox = new QDoubleSpinBox();
+    m_pDoubleSpinBox->setRange(0,0);
+    m_pDoubleSpinBox->setDecimals(2);
+    m_pDoubleSpinBox->setSingleStep(0.01);
+    pGridLayoutShowVIPCard->addWidget(m_pDoubleSpinBox,8,1);
+
+    m_pPushButtonPaymentConfirm = new QPushButton();
+    m_pPushButtonPaymentConfirm->setText(QStringLiteral("确认支付"));
+    pGridLayoutShowVIPCard->addWidget(m_pPushButtonPaymentConfirm,9,0,1,2);
+
     m_pWidgetShowVIPCard->setLayout(pGridLayoutShowVIPCard);
 
     //The global interface
@@ -62,6 +87,10 @@ CardVIPLib::CardVIPLib(QWidget *parent) : QWidget(parent)
     m_pStackedWidget->addWidget(m_pWidgetSearchVIPCard);
     m_pStackedWidget->addWidget(m_pWidgetShowVIPCard);
     m_pStackedWidget->adjustSize();
+    m_pStackedWidget->setWindowTitle("Card VIP");
+
+    qDebug() << m_pStackedWidget->sizePolicy();
+    m_pStackedWidget->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
 
 //    QDesktopWidget* desktop = QApplication::desktop();
 //    int screenWidth = desktop->screenGeometry().width();
@@ -96,6 +125,8 @@ void CardVIPLib::switchPageSlot()
             m_dCardCreditAmount = m_pSqlQueryModelVIPCard->data(m_pSqlQueryModelVIPCard->index(row,4)).toDouble();
 
             m_dCardBalance = getBalanceByCardID(m_sCardID);
+            getCardPromoTypeByCardID(m_sCardID);
+            m_dCardPoint = getCreditAmountByOrderID(m_sOrderID);
 
             //Change to the second page
             int nIndex = m_pStackedWidget->currentIndex();
@@ -106,10 +137,17 @@ void CardVIPLib::switchPageSlot()
             m_pLabelShowCustomerName->setText(QStringLiteral("客户名称 : ") + m_sCustomerName);
             m_pLabelShowCustomerRef->setText(QStringLiteral("客户号 : ") + m_sCustomerRef);
             m_pLabelShowCustomerTel->setText(QStringLiteral("客户电话 : ") + m_sCustomerTel);
-            m_pPushButtonBalance->setText(QStringLiteral("余额 : \n" ) + QString::number(m_dCardBalance,10,2));
-            m_pPushButtonCreditAmount->setText(QStringLiteral("额度 : \n") + QString::number(m_dCardCreditAmount,10,2));
-            m_pPushButtonTotal->setText(QStringLiteral("消费金额 : \n") + QString::number(m_dTotal,10,2));
-            m_pPushButtonPoint->setText(QStringLiteral("积分 : \n"));
+            m_pPushButtonTotal->setText(QStringLiteral("此次消费金额 : ") + QString::number(m_dTotal,10,2));
+            m_pPushButtonBalance->setText(QStringLiteral("卡余额 : " ) + QString::number(m_dCardBalance,10,2));
+            m_pPushButtonCreditAmount->setText(QStringLiteral("额度 : ") + QString::number(m_dCardCreditAmount,10,2));
+            if (m_sCardPromoType == "D") {
+                m_pLabelPromoTitle->setText(QStringLiteral("折扣类型 : 直接打折"));
+            }
+            if (m_sCardPromoType == "P") {
+                m_pLabelPromoTitle->setText(QStringLiteral("折扣类型 : 折扣储值"));
+            }
+            m_pDoubleSpinBox->setRange(0,m_dCardBalance-m_dCardCreditAmount);
+            m_pPushButtonPoint->setText(QStringLiteral("此次消费积分 : ") + QString::number(m_dCardPoint,10,2));
         }
     }
 }
@@ -117,10 +155,11 @@ void CardVIPLib::switchPageSlot()
 //Connect the 2 database
 bool CardVIPLib::initConnectDatabase(QString dbDriverErp,QString dbFilePathErp,QString dbUserNameErp,QString dbPasswordErp,QString dbHostNameErp,int portErp,
                                      QString dbDriverVtp,QString dbFilePathVtp,QString dbUserNameVtp,QString dbPasswordVtp,QString dbHostNameVtp,int portVtp,
-                                     double total)
+                                     QString orderID)
 {
     bool flag = false;
-    m_dTotal = total;
+    //m_dTotal = total;
+    m_sOrderID = orderID;
 
     //Connect the database erp and ventap
     QString databaseERPFilePath = dbFilePathErp;
@@ -187,6 +226,7 @@ void CardVIPLib::searchButtonClickedSlot()
     m_pPushButtonConfirmedVIPCard->setEnabled(true);
 }
 
+//Get the balance in the database erp
 double CardVIPLib::getBalanceByCardID(QString CardID)
 {
     double balance = 0.00;
@@ -194,6 +234,8 @@ double CardVIPLib::getBalanceByCardID(QString CardID)
     if (!m_DatabaseERP.isOpen()) {
         QMessageBox::about(NULL,"ERROR","Database file cannot be opened!");
     } else {
+
+        //Get the balance
         QString sql = "SELECT SUM(CARD_LOG_AMOUNT) FROM CARD_LOG WHERE CARD_ID = ?";
         query.prepare(sql);
         query.bindValue(0,CardID);
@@ -206,6 +248,57 @@ double CardVIPLib::getBalanceByCardID(QString CardID)
         }
     }
     return balance;
+}
+
+//Get the type of the promo and the card amount
+void CardVIPLib::getCardPromoTypeByCardID(QString cardID)
+{
+    QSqlQuery query(m_DatabaseERP);
+    if (!m_DatabaseERP.isOpen()) {
+        QMessageBox::about(NULL,"ERROR","Database file cannot be opened!");
+    } else {
+
+        //Get the type of the promo and the card amount
+        QString sql = "SELECT CARD_PROMO.CARD_PROMO_TYPE,CARD_PROMO.CARD_AMOUNT "
+                      "FROM CARD_PROMO "
+                      "INNER JOIN CARD ON CARD.CARD_TYPE_ID = CARD_PROMO.CARD_TYPE_ID "
+                      "WHERE CARD_ID = ?";
+        query.prepare(sql);
+        query.bindValue(0,cardID);
+        if (!query.exec()) {
+            QMessageBox::about(NULL,"ERROR",query.lastError().text());
+        } else {
+            if (query.next()) {
+                m_sCardPromoType = query.value(0).toString();
+                m_dCardAmount = query.value(1).toDouble();
+            }
+        }
+    }
+}
+
+//Get the Credit amount in the database ventap
+double CardVIPLib::getCreditAmountByOrderID(QString orderID)
+{
+    double creditAmount = 0.00;
+    QSqlQuery query(m_DatabaseVentap);
+    if (!m_DatabaseVentap.isOpen()) {
+        QMessageBox::about(NULL,"ERROR","Database file cannot be opened!");
+    } else {
+
+        //Get the Credit Amount
+        QString sql = "SELECT T_ORDER.TOTAL FROM T_ORDER WHERE ID = ?";
+        query.prepare(sql);
+        query.bindValue(0,orderID);
+        if (!query.exec()) {
+            QMessageBox::about(NULL,"ERROR",query.lastError().text());
+        } else {
+            if (query.next()) {
+                m_dTotal = query.value(0).toDouble();
+            }
+        }
+    }
+    creditAmount = m_dTotal * m_dCardAmount /100;
+    return creditAmount;
 }
 
 

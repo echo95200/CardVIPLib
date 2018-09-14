@@ -101,6 +101,23 @@ CardVIPLib::CardVIPLib(QWidget *parent) : QWidget(parent)
     connect(m_pPushButtonSearchVIPCard,SIGNAL(clicked(bool)),this,SLOT(searchButtonClickedSlot()));
 }
 
+QWidget* initCardVIP(QString dbDriverErp, QString dbFilePathErp, QString dbUserNameErp,
+                QString dbPasswordErp, QString dbHostNameErp, int portErp,
+                QString dbDriverVtp, QString dbFilePathVtp, QString dbUserNameVtp,
+                QString dbPasswordVtp, QString dbHostNameVtp, int portVtp,QString orderID, QWidget *parent)
+{
+    CardVIPLib *lib = new CardVIPLib(parent);
+    lib->resize(parent->size());
+    if (lib->initConnectDatabase(dbDriverErp, dbFilePathErp, dbUserNameErp, dbPasswordErp, dbHostNameErp, portErp,
+                             dbDriverVtp, dbFilePathVtp, dbUserNameVtp, dbPasswordVtp, dbHostNameVtp, portVtp,
+                                 orderID)) {
+        lib->show();
+    } else {
+        return NULL;
+    }
+    return lib;
+}
+
 CardVIPLib::~CardVIPLib()
 {
     m_DatabaseERP.close();

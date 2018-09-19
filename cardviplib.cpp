@@ -22,7 +22,7 @@ CardVIPLib::CardVIPLib(QWidget *parent) : QWidget(parent)
     m_pWidgetSearchVIPCard = new QWidget();
     m_pLabel = new QLabel();
     m_pLineEditCardID = new QLineEdit();
-    m_pLineEditCardID->setFocus();
+    m_pLineEditCardID->setFocusPolicy(Qt::StrongFocus);
     m_pPushButtonSearchVIPCard = new QPushButton();
     m_pPushButtonSearchVIPCard->setText(QStringLiteral("查找"));
     m_pTableViewVIPCard = new QTableView();
@@ -151,32 +151,32 @@ void CardVIPLib::switchPageSlot()
     if (listSelected.count() == 0) {
         QMessageBox::about(NULL,QStringLiteral("警告"),QStringLiteral("请选择一个客户!"));
     } else {
-        foreach (QModelIndex index, listSelected) {
+        //foreach (QModelIndex index, listSelected) {
             //Get the info of the customer
-            int row = index.row();
-            m_sCardID = m_pSqlQueryModelVIPCard->data(m_pSqlQueryModelVIPCard->index(row,0)).toString();
-            m_sCustomerName = m_pSqlQueryModelVIPCard->data(m_pSqlQueryModelVIPCard->index(row,1)).toString();
-            m_sCustomerRef = m_pSqlQueryModelVIPCard->data(m_pSqlQueryModelVIPCard->index(row,2)).toString();
-            m_sCustomerTel = m_pSqlQueryModelVIPCard->data(m_pSqlQueryModelVIPCard->index(row,3)).toString();
-            m_dCardCreditAmount = m_pSqlQueryModelVIPCard->data(m_pSqlQueryModelVIPCard->index(row,4)).toDouble();
+        QModelIndex index = m_pTableViewVIPCard->selectionModel()->currentIndex();
+        int row = index.row();
+        m_sCardID = m_pSqlQueryModelVIPCard->data(m_pSqlQueryModelVIPCard->index(row,0)).toString();
+        m_sCustomerName = m_pSqlQueryModelVIPCard->data(m_pSqlQueryModelVIPCard->index(row,1)).toString();
+        m_sCustomerRef = m_pSqlQueryModelVIPCard->data(m_pSqlQueryModelVIPCard->index(row,2)).toString();
+        m_sCustomerTel = m_pSqlQueryModelVIPCard->data(m_pSqlQueryModelVIPCard->index(row,3)).toString();
+        m_dCardCreditAmount = m_pSqlQueryModelVIPCard->data(m_pSqlQueryModelVIPCard->index(row,4)).toDouble();
 
-            m_dCardBalance = getBalanceByCardID(m_sCardID);
-            getCardPromoTypeByCardID(m_sCardID);
-            m_dCardPoint = getCreditAmountByOrderID(m_sOrderID);
+        m_dCardBalance = getBalanceByCardID(m_sCardID);
+        getCardPromoTypeByCardID(m_sCardID);
+        m_dCardPoint = getCreditAmountByOrderID(m_sOrderID);
 
-            //Change to the second page
-            int nIndex = m_pStackedWidget->currentIndex();
-            nIndex++;
-            m_pStackedWidget->setCurrentIndex(nIndex);
-            //Set the info
-            m_pLabelShowVIPCard->setText(QStringLiteral("卡号 : ") + m_sCardID);
-            m_pLabelShowCustomerName->setText(QStringLiteral("客户名称 : ") + m_sCustomerName);
-            m_pLabelShowCustomerRef->setText(QStringLiteral("客户号 : ") + m_sCustomerRef);
-            m_pLabelShowCustomerTel->setText(QStringLiteral("客户电话 : ") + m_sCustomerTel);
-            m_pPushButtonTotal->setText(QStringLiteral("此次消费金额 : ") + QString::number(m_dTotal,10,2));
-            m_pPushButtonBalance->setText(QStringLiteral("卡余额 : " ) + QString::number(m_dCardBalance,10,2));
-            m_pPushButtonCreditAmount->setText(QStringLiteral("额度 : ") + QString::number(m_dCardCreditAmount,10,2));
-            }
+        //Change to the second page
+        int nIndex = m_pStackedWidget->currentIndex();
+        nIndex++;
+        m_pStackedWidget->setCurrentIndex(nIndex);
+        //Set the info
+        m_pLabelShowVIPCard->setText(QStringLiteral("卡号 : ") + m_sCardID);
+        m_pLabelShowCustomerName->setText(QStringLiteral("客户名称 : ") + m_sCustomerName);
+        m_pLabelShowCustomerRef->setText(QStringLiteral("客户号 : ") + m_sCustomerRef);
+        m_pLabelShowCustomerTel->setText(QStringLiteral("客户电话 : ") + m_sCustomerTel);
+        m_pPushButtonTotal->setText(QStringLiteral("此次消费金额 : ") + QString::number(m_dTotal,10,2));
+        m_pPushButtonBalance->setText(QStringLiteral("卡余额 : " ) + QString::number(m_dCardBalance,10,2));
+        m_pPushButtonCreditAmount->setText(QStringLiteral("额度 : ") + QString::number(m_dCardCreditAmount,10,2));
 
         if (m_sCardPromoType == "D") {
             m_pLabelPromoTitle->setText(QStringLiteral("折扣类型 : 直接打折"));
@@ -332,24 +332,95 @@ void CardVIPLib::getCardPromoTypeByCardID(QString cardID)
 double CardVIPLib::getCreditAmountByOrderID(QString orderID)
 {
     double creditAmount = 0.00;
+    QString productRef = "";
+    QString productDesc = "";
+    int productCnt;
+    QStringList strListProductRef;
+    QStringList strListProductDesc;
+    QList<int> iListProductCnt;
     QSqlQuery query(m_DatabaseVentap);
+    QString sql;
     if (!m_DatabaseVentap.isOpen()) {
         QMessageBox::about(NULL,"ERROR","Database file cannot be opened!");
     } else {
 
-        //Get the Credit Amount
-        QString sql = "SELECT T_ORDER.TOTAL FROM T_ORDER WHERE ID = ?";
+        //Get the list of the product form ventap
+        sql = "SELECT T_ORDER_DETAIL.PRD_REF,T_ORDER_DETAIL.PRD_ORG,T_ORDER_DETAIL.CNT,T_ORDER.TOTAL FROM T_ORDER_DETAIL "
+                      "INNER JOIN T_ORDER ON T_ORDER.ID = T_ORDER_DETAIL.ORDER_ID "
+                      "WHERE T_ORDER.ID = ?";
         query.prepare(sql);
         query.bindValue(0,orderID);
         if (!query.exec()) {
             QMessageBox::about(NULL,"ERROR",query.lastError().text());
         } else {
-            if (query.next()) {
-                m_dTotal = query.value(0).toDouble();
+            while (query.next()) {
+                productRef = query.value(0).toString();
+                strListProductRef.append(productRef);
+                productDesc = query.value(1).toString();
+                strListProductDesc.append(productDesc);
+                productCnt = query.value(2).toInt();
+                iListProductCnt.append(productCnt);
+                m_dTotal = query.value(3).toDouble();
+                qDebug() << productRef << productDesc << productCnt << query.value(3).toDouble();
             }
         }
     }
-    creditAmount = m_dTotal * m_dCardAmount /100;
+
+    QString productID = "";
+    QString reference = "";
+    QString description = "";
+    QStringList strListProductID;
+    QList<int> iListPrdCnt;
+    int count = strListProductRef.count();
+
+    QSqlQuery queryErp(m_DatabaseERP);
+    if (!m_DatabaseERP.isOpen()) {
+        QMessageBox::about(NULL,"ERROR","Database file cannot be opened!");
+    } else {
+
+        sql = "SELECT ID,REFERENCE,DESCRIPTION FROM VIEW_VT_PRD";
+        queryErp.prepare(sql);
+        if (!queryErp.exec()) {
+            QMessageBox::about(NULL,"ERROR",queryErp.lastError().text());
+        } else {
+            while (queryErp.next()){
+                productID = queryErp.value(0).toString();
+                reference = queryErp.value(1).toString();
+                description = queryErp.value(2).toString();
+                int i = 0;
+                while (i < count) {
+                    if ((reference == strListProductRef.at(i)) && (description == strListProductDesc.at(i))) {
+                        strListProductID.append(productID);
+                        iListPrdCnt.append(iListProductCnt.at(i));
+                    }
+                    i++;
+                }
+            }
+            qDebug() << strListProductID.count();
+        }
+
+        creditAmount = 0.00;
+        if (strListProductID.count() == 0) {
+            creditAmount = 0.00;
+        } else {
+            int i = 0;
+            while (i < strListProductID.count()) {
+                sql = "SELECT CARD_PROMO.CARD_MOUNT,PRODUCT.PRODUCT_PROPOSED_WS_PRICE FROM CARD_PROMO "
+                      "INNER JOIN CARD_PROMO_PRD_SET ON CARD_PROMO.ID = CARD_PROMO_PRD_SET.CARD_PROMO_ID "
+                      "WHERE CARD_PROMO_PRD_SET.PRODUCT_ID = ?";
+                queryErp.prepare(sql);
+                queryErp.bindValue(0,strListProductID.at(i));
+                i++;
+                if (!queryErp.exec()) {
+                    QMessageBox::about(NULL,"ERROR",queryErp.lastError().text());
+                } else {
+                    double discount = queryErp.value(0).toDouble();
+                    double prix = queryErp.value(1).toDouble();
+                    creditAmount = creditAmount + iListPrdCnt.at(i) * prix * discount / 100;
+                }
+            }
+        }
+    }
     return creditAmount;
 }
 

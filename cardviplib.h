@@ -23,6 +23,8 @@
 #include <QSqlError>
 #include <QFrame>
 #include <QDoubleSpinBox>
+#include <QDateTime>
+#include <QFormLayout>
 #include <QDebug>
 
 class CARDVIPLIBSHARED_EXPORT CardVIPLib : public QWidget
@@ -38,12 +40,35 @@ public:
     double getCreditAmountByOrderID(QString orderID);
     void getCardPromoTypeByCardID(QString CardID);
     ~CardVIPLib();
+    bool updateDatabaseERP(QString orderType,double cardLogAmount);
+    void verifyUser();
+
+signals:
+    void myDiscountCardVIPSignal(double total,double cardAmount,QString cardID,QString orderID);
+    void myPaymentByCardVIPSignal(int paymentType,QString cardID,QString orderID,
+                                  double total,double totalAfterDiscount,QString promoType,
+                                  double cardAmount,double amountPayCard);
+    void myNotPaymentByCardVIPSignal(int paymentType,QString cardID,QString orderID,
+                                     double total,double totalAfterDiscount,QString promoType,
+                                     double cardAmount,double amountPayCard);
+    void verifyUserResultSignal(bool flag);
+
 
 private slots:
     void switchPageSlot();
     void searchButtonClickedSlot();
+    void myAfterDiscountSlot(double total);
+    void useBalanceButtonClickedSlot();
+    void notUseBalanceButtonClickedSlot();
+    void cancelButtonButtonClickedSlot();
+    void verifyUserSlot();
+    void verifyUserResultSlot(bool flag);
 
 private:
+
+    //The main widget
+    QWidget *m_pWidgetMain;
+
     //The widget of the search of the VIP card
     QWidget *m_pWidgetSearchVIPCard;
     QLineEdit *m_pLineEditCardID;
@@ -67,12 +92,10 @@ private:
     QFrame *m_pFrame;
     QLabel *m_pLabelPromoTitle;
     QPushButton *m_pPushButtonUseBalance;
-    QDoubleSpinBox *m_pDoubleSpinBox;
-    QPushButton *m_pPushButtonPaymentConfirm;
-
+    QPushButton *m_pPushButtonNotUseBalance;
+    QPushButton *m_pPushButtonCancel;
     //Layout
     QStackedWidget *m_pStackedWidget;
-
     //Database
     QSqlDatabase m_DatabaseERP;
     QSqlDatabase m_DatabaseVentap;
@@ -87,9 +110,18 @@ private:
     double m_dCardCreditAmount;
     double m_dTotal;
     double m_dCardPoint;
-
+    double m_dTotalAfterDiscount;
+    double m_dAmountPayCard;
     QString m_sCardPromoType;
     double m_dCardAmount;
+
+    //The page to insert the password of user
+    QWidget *m_pWidgetVerifyUser;
+    QFormLayout *m_pFormLayout;
+    QLineEdit *m_pLineEditUserCardID;
+    QLineEdit *m_pLineEditUserPassword;
+    QPushButton *m_pPushButtonUserConfirm;
+    QPushButton *m_pPushButtonUserCancel;
 
 };
 

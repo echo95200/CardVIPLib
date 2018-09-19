@@ -3,10 +3,26 @@
 
 CardVIPLib::CardVIPLib(QWidget *parent) : QWidget(parent)
 {
+    //Initialization Parameter
+    m_sCardID = "";
+    m_sCustomerName = "";
+    m_sCustomerRef = "";
+    m_sCustomerTel = "";
+    m_sOrderID = "";
+    m_sCardPromoType = "";
+    m_dCardBalance = 0.00;
+    m_dCardCreditAmount = 0.00;
+    m_dTotal = 0.00;
+    m_dCardPoint = 0.00;
+    m_dTotalAfterDiscount = 0.00;
+    m_dAmountPayCard = 0.00;
+    m_dCardAmount = 0.00;
+
     //The first interface of the search
     m_pWidgetSearchVIPCard = new QWidget();
     m_pLabel = new QLabel();
     m_pLineEditCardID = new QLineEdit();
+    m_pLineEditCardID->setFocus();
     m_pPushButtonSearchVIPCard = new QPushButton();
     m_pPushButtonSearchVIPCard->setText(QStringLiteral("查找"));
     m_pTableViewVIPCard = new QTableView();
@@ -14,8 +30,6 @@ CardVIPLib::CardVIPLib(QWidget *parent) : QWidget(parent)
     m_pPushButtonConfirmedVIPCard = new QPushButton();
     m_pPushButtonConfirmedVIPCard->setText(QStringLiteral("确定"));
     m_pPushButtonConfirmedVIPCard->setEnabled(false);
-
-    qDebug() << m_pTableViewVIPCard->sizePolicy();
 
     //The layout of the search
     QGridLayout *pGridLayoutSearchVIPCard = new QGridLayout();
@@ -36,15 +50,10 @@ CardVIPLib::CardVIPLib(QWidget *parent) : QWidget(parent)
     m_pLabelShowCustomerName = new QLabel();
     m_pLabelShowCustomerRef = new QLabel();
     m_pLabelShowCustomerTel = new QLabel();
-    m_pLabelShowVIPCard->setText("Card ID");
     m_pPushButtonBalance = new QPushButton();
     m_pPushButtonCreditAmount = new QPushButton();
     m_pPushButtonTotal = new QPushButton();
     m_pPushButtonPoint = new QPushButton();
-    m_pPushButtonBalance->setText("Balance : ");
-    m_pPushButtonCreditAmount->setText("Credit Amount : ");
-    m_pPushButtonTotal->setText("Total : ");
-    m_pPushButtonPoint->setText("Point : ");
     QGridLayout *pGridLayoutShowVIPCard = new QGridLayout();
     pGridLayoutShowVIPCard->addWidget(m_pLabelShowVIPCard,0,0,1,1);
     pGridLayoutShowVIPCard->addWidget(m_pLabelShowCustomerName,1,0,1,1);
@@ -67,38 +76,49 @@ CardVIPLib::CardVIPLib(QWidget *parent) : QWidget(parent)
     pGridLayoutShowVIPCard->addWidget(m_pFrame,6,0,2,2);
 
     m_pPushButtonUseBalance = new QPushButton();
-    m_pPushButtonUseBalance->setText(QStringLiteral("使用会员卡积分 : "));
+    m_pPushButtonUseBalance->setText(QStringLiteral("使用会员卡积分"));
     pGridLayoutShowVIPCard->addWidget(m_pPushButtonUseBalance,8,0);
-
-    m_pDoubleSpinBox = new QDoubleSpinBox();
-    m_pDoubleSpinBox->setRange(0,0);
-    m_pDoubleSpinBox->setDecimals(2);
-    m_pDoubleSpinBox->setSingleStep(0.01);
-    pGridLayoutShowVIPCard->addWidget(m_pDoubleSpinBox,8,1);
-
-    m_pPushButtonPaymentConfirm = new QPushButton();
-    m_pPushButtonPaymentConfirm->setText(QStringLiteral("确认支付"));
-    pGridLayoutShowVIPCard->addWidget(m_pPushButtonPaymentConfirm,9,0,1,2);
-
+    m_pPushButtonNotUseBalance = new QPushButton();
+    m_pPushButtonNotUseBalance->setText(QStringLiteral("直接支付"));
+    pGridLayoutShowVIPCard->addWidget(m_pPushButtonNotUseBalance,8,1);
+    m_pPushButtonCancel = new QPushButton();
+    m_pPushButtonCancel->setText(QStringLiteral("取消"));
+    pGridLayoutShowVIPCard->addWidget(m_pPushButtonCancel,8,2);
     m_pWidgetShowVIPCard->setLayout(pGridLayoutShowVIPCard);
 
+    m_pWidgetMain = new QWidget(this);
+    m_pWidgetMain->resize(parent->size());
+    QGridLayout *pGridLayoutWidgetMain = new QGridLayout();
+
     //The global interface
-    m_pStackedWidget = new QStackedWidget(this);
+    m_pStackedWidget = new QStackedWidget(m_pWidgetMain);
     m_pStackedWidget->addWidget(m_pWidgetSearchVIPCard);
     m_pStackedWidget->addWidget(m_pWidgetShowVIPCard);
-    m_pStackedWidget->adjustSize();
-    m_pStackedWidget->setWindowTitle("Card VIP");
 
-    qDebug() << m_pStackedWidget->sizePolicy();
-    m_pStackedWidget->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
+    pGridLayoutWidgetMain->addWidget(m_pStackedWidget);
+    m_pWidgetMain->setLayout(pGridLayoutWidgetMain);
 
-//    QDesktopWidget* desktop = QApplication::desktop();
-//    int screenWidth = desktop->screenGeometry().width();
-//    int screenHeight = desktop->screenGeometry().height();
-//    this->resize(0.5*screenWidth,0.5*screenHeight);
+    //The page to verify the user
+    m_pWidgetVerifyUser = new QWidget();
+    m_pFormLayout = new QFormLayout();
+    m_pLineEditUserCardID = new QLineEdit();
+    m_pLineEditUserPassword = new QLineEdit();
+    m_pPushButtonUserConfirm = new QPushButton();
+    m_pPushButtonUserCancel = new QPushButton();
+    m_pFormLayout->addRow(QStringLiteral("卡号 :"),m_pLineEditUserCardID);
+    m_pFormLayout->addRow(QStringLiteral("密码 :"),m_pLineEditUserPassword);
+    m_pFormLayout->addRow(m_pPushButtonUserConfirm,m_pPushButtonUserCancel);
+    m_pFormLayout->setSpacing(10);
+    m_pFormLayout->setMargin(10);
 
     connect(m_pPushButtonConfirmedVIPCard,SIGNAL(clicked(bool)),this,SLOT(switchPageSlot()));
     connect(m_pPushButtonSearchVIPCard,SIGNAL(clicked(bool)),this,SLOT(searchButtonClickedSlot()));
+    connect(m_pPushButtonUseBalance,SIGNAL(clicked(bool)),this,SLOT(useBalanceButtonClickedSlot()));
+    connect(m_pPushButtonNotUseBalance,SIGNAL(clicked(bool)),this,SLOT(notUseBalanceButtonClickedSlot()));
+    connect(m_pPushButtonCancel,SIGNAL(clicked(bool)),this,SLOT(cancelButtonButtonClickedSlot()));
+    connect(m_pPushButtonUserConfirm,SIGNAL(clicked(bool)),this,SLOT(verifyUserSlot()));
+    connect(m_pPushButtonUserCancel,SIGNAL(clicked(bool)),m_pWidgetVerifyUser,SLOT(close()));
+    connect(this,SIGNAL(verifyUserResultSignal(bool)),this,SLOT(verifyUserResultSlot(bool)));
 }
 
 QWidget* initCardVIP(QString dbDriverErp, QString dbFilePathErp, QString dbUserNameErp,
@@ -107,9 +127,8 @@ QWidget* initCardVIP(QString dbDriverErp, QString dbFilePathErp, QString dbUserN
                 QString dbPasswordVtp, QString dbHostNameVtp, int portVtp,QString orderID, QWidget *parent)
 {
     CardVIPLib *lib = new CardVIPLib(parent);
-    lib->resize(parent->size());
     if (lib->initConnectDatabase(dbDriverErp, dbFilePathErp, dbUserNameErp, dbPasswordErp, dbHostNameErp, portErp,
-                             dbDriverVtp, dbFilePathVtp, dbUserNameVtp, dbPasswordVtp, dbHostNameVtp, portVtp,
+                                 dbDriverVtp, dbFilePathVtp, dbUserNameVtp, dbPasswordVtp, dbHostNameVtp, portVtp,
                                  orderID)) {
         lib->show();
     } else {
@@ -130,7 +149,7 @@ void CardVIPLib::switchPageSlot()
     //Check the client selected
     QModelIndexList listSelected = m_pTableViewVIPCard->selectionModel()->selectedIndexes();
     if (listSelected.count() == 0) {
-        QMessageBox::about(NULL,"Info","You have to selected a customer!");
+        QMessageBox::about(NULL,QStringLiteral("警告"),QStringLiteral("请选择一个客户!"));
     } else {
         foreach (QModelIndex index, listSelected) {
             //Get the info of the customer
@@ -157,14 +176,18 @@ void CardVIPLib::switchPageSlot()
             m_pPushButtonTotal->setText(QStringLiteral("此次消费金额 : ") + QString::number(m_dTotal,10,2));
             m_pPushButtonBalance->setText(QStringLiteral("卡余额 : " ) + QString::number(m_dCardBalance,10,2));
             m_pPushButtonCreditAmount->setText(QStringLiteral("额度 : ") + QString::number(m_dCardCreditAmount,10,2));
-            if (m_sCardPromoType == "D") {
-                m_pLabelPromoTitle->setText(QStringLiteral("折扣类型 : 直接打折"));
             }
-            if (m_sCardPromoType == "P") {
-                m_pLabelPromoTitle->setText(QStringLiteral("折扣类型 : 折扣储值"));
-            }
-            m_pDoubleSpinBox->setRange(0,m_dCardBalance-m_dCardCreditAmount);
+
+        if (m_sCardPromoType == "D") {
+            m_pLabelPromoTitle->setText(QStringLiteral("折扣类型 : 直接打折"));
+            emit myDiscountCardVIPSignal(m_dTotal,m_dCardAmount,m_sCardID,m_sOrderID);
+            m_pPushButtonPoint->setText(QStringLiteral("此次消费折扣 : ") + QString::number(m_dCardAmount,10,0) + "%");
+            m_dCardPoint = 0.00;
+        }
+        if (m_sCardPromoType == "P") {
+            m_pLabelPromoTitle->setText(QStringLiteral("折扣类型 : 折扣储值"));
             m_pPushButtonPoint->setText(QStringLiteral("此次消费积分 : ") + QString::number(m_dCardPoint,10,2));
+            m_dTotalAfterDiscount = m_dTotal;
         }
     }
 }
@@ -175,7 +198,6 @@ bool CardVIPLib::initConnectDatabase(QString dbDriverErp,QString dbFilePathErp,Q
                                      QString orderID)
 {
     bool flag = false;
-    //m_dTotal = total;
     m_sOrderID = orderID;
 
     //Connect the database erp and ventap
@@ -217,30 +239,43 @@ bool CardVIPLib::initConnectDatabase(QString dbDriverErp,QString dbFilePathErp,Q
     return flag;
 }
 
+//refresh the page after the receive the signal discount
+void CardVIPLib::myAfterDiscountSlot(double total)
+{
+    m_dTotalAfterDiscount = total;
+    m_pPushButtonTotal->setText(QStringLiteral("此次消费金额 : ") + QString::number(m_dTotalAfterDiscount,10,2));
+}
+
 //Search the customer
 void CardVIPLib::searchButtonClickedSlot()
 {
     QString str = m_pLineEditCardID->text();
-    QString sql = "SELECT CARD.CARD_ID,CUSTOMER.CUSTOMER_NAME_1,CUSTOMER.CUSTOMER_REFERENCE,CUSTOMER.CUSTOMER_TEL_1,CARD.CARD_CREDIT_AMOUNT "
-                  "FROM CUSTOMER "
-                  "INNER JOIN CARD ON CARD.CUSTOMER_ID =CUSTOMER.CUSTOMER_ID ";
-    sql = sql + "WHERE CUSTOMER.CUSTOMER_NAME_1 LIKE '%" + str + "%' "
-                      "OR CUSTOMER.CUSTOMER_TEL_1 LIKE '%" + str + "%' "
-                      "OR CUSTOMER.CUSTOMER_REFERENCE LIKE '%" + str + "%' "
-                      "OR CARD.CARD_ID LIKE '%" + str + "%'";
-    m_pSqlQueryModelVIPCard->setQuery(sql,m_DatabaseERP);
-    m_pTableViewVIPCard->setModel(m_pSqlQueryModelVIPCard);
-    m_pSqlQueryModelVIPCard->setHeaderData(0,Qt::Horizontal,"Card ID");
-    m_pSqlQueryModelVIPCard->setHeaderData(1,Qt::Horizontal,"Name");
-    m_pSqlQueryModelVIPCard->setHeaderData(2,Qt::Horizontal,"Ref");
-    m_pSqlQueryModelVIPCard->setHeaderData(3,Qt::Horizontal,"Tel");
-    m_pTableViewVIPCard->setColumnHidden(4,true);
-    m_pTableViewVIPCard->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_pTableViewVIPCard->setSelectionMode(QAbstractItemView::SingleSelection);
-    m_pTableViewVIPCard->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    m_pTableViewVIPCard->verticalHeader()->hide();
+    if (str.count() > 2) {
+        QString sql = "SELECT CARD.CARD_ID,CUSTOMER.CUSTOMER_NAME_1,CUSTOMER.CUSTOMER_REFERENCE,CUSTOMER.CUSTOMER_TEL_1,CARD.CARD_CREDIT_AMOUNT "
+                      "FROM CUSTOMER "
+                      "INNER JOIN CARD ON CARD.CUSTOMER_ID =CUSTOMER.CUSTOMER_ID ";
+        sql = sql + "WHERE CUSTOMER.CUSTOMER_NAME_1 LIKE '%" + str + "%' "
+                          "OR CUSTOMER.CUSTOMER_TEL_1 LIKE '%" + str + "%' "
+                          "OR CUSTOMER.CUSTOMER_REFERENCE LIKE '%" + str + "%' "
+                          "OR CARD.CARD_ID LIKE '%" + str + "%'";
+        m_pSqlQueryModelVIPCard->setQuery(sql,m_DatabaseERP);
+        m_pTableViewVIPCard->setModel(m_pSqlQueryModelVIPCard);
+        m_pSqlQueryModelVIPCard->setHeaderData(0,Qt::Horizontal,QStringLiteral("客户号 : "));
+        m_pSqlQueryModelVIPCard->setHeaderData(1,Qt::Horizontal,QStringLiteral("客户名称 : "));
+        m_pSqlQueryModelVIPCard->setHeaderData(2,Qt::Horizontal,QStringLiteral("客户编号 : "));
+        m_pSqlQueryModelVIPCard->setHeaderData(3,Qt::Horizontal,QStringLiteral("电话 : "));
+        m_pTableViewVIPCard->setColumnHidden(4,true);
+        m_pTableViewVIPCard->setSelectionBehavior(QAbstractItemView::SelectRows);
+        m_pTableViewVIPCard->setSelectionMode(QAbstractItemView::SingleSelection);
+        m_pTableViewVIPCard->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        m_pTableViewVIPCard->verticalHeader()->hide();
 
-    m_pPushButtonConfirmedVIPCard->setEnabled(true);
+        m_pPushButtonConfirmedVIPCard->setEnabled(true);
+    } else {
+        QMessageBox::about(NULL,QStringLiteral("警告"),QStringLiteral("请至少输入三位字符!"));
+        m_pLineEditCardID->setFocus();
+    }
+
 }
 
 //Get the balance in the database erp
@@ -318,8 +353,128 @@ double CardVIPLib::getCreditAmountByOrderID(QString orderID)
     return creditAmount;
 }
 
+//When the button useTheBalance is clicked
+void CardVIPLib::useBalanceButtonClickedSlot()
+{
+    double limit = m_dCardBalance + m_dCardCreditAmount;;
+    if (m_dTotalAfterDiscount > limit) {
+        QMessageBox::about(NULL,QStringLiteral("错误"),QStringLiteral("余额不足"));
+    } else {
+        verifyUser();
+    }
+}
 
+//When the button notUseBalance is clicked
+void CardVIPLib::notUseBalanceButtonClickedSlot()
+{
+    m_dAmountPayCard = 0.00;
+    if (updateDatabaseERP("+",m_dCardPoint)) {
+        emit myNotPaymentByCardVIPSignal(2,m_sCardID,m_sOrderID,m_dTotal,m_dTotalAfterDiscount,m_sCardPromoType,m_dCardAmount,m_dAmountPayCard);
+        m_pPushButtonNotUseBalance->setEnabled(false);
+        m_pPushButtonUseBalance->setEnabled(false);
+    } else {
+        QMessageBox::about(NULL,QStringLiteral("错误"),QStringLiteral("数据库更新失败!"));
+    }
+}
 
+//When the button calcel is clicked
+void CardVIPLib::cancelButtonButtonClickedSlot()
+{
+    this->close();
+}
+
+//Update the database
+bool CardVIPLib::updateDatabaseERP(QString orderType,double cardLogAmount)
+{
+    bool flag = false;
+    QDateTime dateTime = QDateTime::currentDateTime();
+    QString strDate = dateTime.toString("yyyy-MM-dd");
+    QString strTime = dateTime.toString("hh:mm:ss.dddd");
+    QSqlQuery query(m_DatabaseERP);
+    if (!m_DatabaseERP.isOpen()) {
+        QMessageBox::about(NULL,"ERROR","Database file cannot be opened!");
+    } else {
+
+        QString sql = "INSERT INTO CARD_LOG "
+                      "(CARD_LOG_ID, CARD_ID, CARD_LOG_DATE, ORDER_TYPE, ORDER_ID, "
+                      "CARD_LOG_AMOUNT, CARD_LOG_NOTE, OPERATOR_ID, CARD_LOG_TIME, "
+                      "CARD_LOG_POINT, CARD_LOG_MEMO) "
+                      "VALUES(NULL, ?, ?, ?, ?, ?, NULL, NULL, ?, NULL, NULL)";
+        query.prepare(sql);
+        query.bindValue(0,m_sCardID);
+        query.bindValue(1,strDate);
+        query.bindValue(2,orderType);
+        query.bindValue(3,m_sOrderID);
+        query.bindValue(4,cardLogAmount);
+        query.bindValue(5,strTime);
+
+        if (!query.exec()) {
+            QMessageBox::about(NULL,"ERROR",query.lastError().text());
+        } else {
+            flag = true;
+        }
+    }
+    return flag;
+
+}
+
+void CardVIPLib::verifyUser()
+{
+    m_pLineEditUserCardID->setText(m_sCardID);
+    m_pLineEditUserCardID->setEnabled(false);
+    m_pLineEditUserPassword->setEchoMode(QLineEdit::Password);
+    m_pLineEditUserPassword->setFocus();
+    m_pPushButtonUserConfirm->setText(QStringLiteral("确定"));
+    m_pPushButtonUserCancel->setText(QStringLiteral("取消"));
+    m_pWidgetVerifyUser->setLayout(m_pFormLayout);
+    m_pWidgetVerifyUser->show();
+}
+
+void CardVIPLib::verifyUserSlot()
+{
+    QString cardID = m_pLineEditUserCardID->text();
+    QString password = m_pLineEditUserPassword->text();
+    QSqlQuery query(m_DatabaseERP);
+    QString sql = "";
+    if (!m_DatabaseVentap.isOpen()) {
+        QMessageBox::about(NULL,"ERROR","Database file cannot be opened!");
+    } else {
+
+        sql = "SELECT CARD_ID FROM CARD WHERE CARD_ID = ? AND (CARD_PASSWORD IS NULL OR CARD_PASSWORD = ?)";
+        query.prepare(sql);
+        query.bindValue(0,cardID);
+        query.bindValue(1,password);
+        if (!query.exec()) {
+            QMessageBox::about(NULL,"ERROR",query.lastError().text());
+        } else {
+            if (query.next()) {
+                emit verifyUserResultSignal(true);
+            } else {
+                emit verifyUserResultSignal(false);
+            }
+        }
+    }
+
+}
+
+void CardVIPLib::verifyUserResultSlot(bool flag)
+{
+    if (flag) {
+        m_dAmountPayCard = m_dTotalAfterDiscount;
+        if (updateDatabaseERP("R",-m_dAmountPayCard) && updateDatabaseERP("+",m_dCardPoint)) {
+            emit myPaymentByCardVIPSignal(1,m_sCardID,m_sOrderID,m_dTotal,m_dTotalAfterDiscount,m_sCardPromoType,m_dCardAmount,m_dAmountPayCard);
+            m_pPushButtonNotUseBalance->setEnabled(false);
+            m_pPushButtonUseBalance->setEnabled(false);
+            m_pWidgetVerifyUser->close();
+         } else {
+            QMessageBox::about(NULL,QStringLiteral("错误"),QStringLiteral("余额付款失败!"));
+         }
+    } else {
+        QMessageBox::about(NULL,QStringLiteral("错误"),QStringLiteral("密码错误!"));
+        m_pLineEditUserPassword->clear();
+        m_pLineEditUserPassword->setFocus();
+    }
+}
 
 
 

@@ -335,9 +335,11 @@ double CardVIPLib::getCreditAmountByOrderID(QString orderID)
     QString productRef = "";
     QString productDesc = "";
     int productCnt;
+    double productPrice;
     QStringList strListProductRef;
     QStringList strListProductDesc;
     QList<int> iListProductCnt;
+    QList<double> dListProductPrice;
     QSqlQuery query(m_DatabaseVentap);
     QString sql;
     if (!m_DatabaseVentap.isOpen()) {
@@ -345,7 +347,7 @@ double CardVIPLib::getCreditAmountByOrderID(QString orderID)
     } else {
 
         //Get the list of the product form ventap
-        sql = "SELECT T_ORDER_DETAIL.PRD_REF,T_ORDER_DETAIL.PRD_ORG,T_ORDER_DETAIL.CNT,T_ORDER.TOTAL FROM T_ORDER_DETAIL "
+        sql = "SELECT T_ORDER_DETAIL.PRD_REF,T_ORDER_DETAIL.PRD_ORG,T_ORDER_DETAIL.CNT,T_ORDER_DETAIL.PRICE,T_ORDER.TOTAL FROM T_ORDER_DETAIL "
                       "INNER JOIN T_ORDER ON T_ORDER.ID = T_ORDER_DETAIL.ORDER_ID "
                       "WHERE T_ORDER.ID = ?";
         query.prepare(sql);
@@ -360,8 +362,9 @@ double CardVIPLib::getCreditAmountByOrderID(QString orderID)
                 strListProductDesc.append(productDesc);
                 productCnt = query.value(2).toInt();
                 iListProductCnt.append(productCnt);
-                m_dTotal = query.value(3).toDouble();
-                qDebug() << productRef << productDesc << productCnt << query.value(3).toDouble();
+                productPrice = query.value(3).toDouble();
+                dListProductPrice.append(productPrice);
+                m_dTotal = query.value(4).toDouble();
             }
         }
     }
@@ -371,9 +374,11 @@ double CardVIPLib::getCreditAmountByOrderID(QString orderID)
     QString description = "";
     QStringList strListProductID;
     QList<int> iListPrdCnt;
+    QList<double> dListPrdPrice;
     int count = strListProductRef.count();
 
     QSqlQuery queryErp(m_DatabaseERP);
+    QSqlQuery queryErp2(m_DatabaseERP);
     if (!m_DatabaseERP.isOpen()) {
         QMessageBox::about(NULL,"ERROR","Database file cannot be opened!");
     } else {
@@ -392,11 +397,11 @@ double CardVIPLib::getCreditAmountByOrderID(QString orderID)
                     if ((reference == strListProductRef.at(i)) && (description == strListProductDesc.at(i))) {
                         strListProductID.append(productID);
                         iListPrdCnt.append(iListProductCnt.at(i));
+                        dListPrdPrice.append(dListProductPrice.at(i));
                     }
                     i++;
                 }
             }
-            qDebug() << strListProductID.count();
         }
 
         creditAmount = 0.00;
@@ -405,18 +410,21 @@ double CardVIPLib::getCreditAmountByOrderID(QString orderID)
         } else {
             int i = 0;
             while (i < strListProductID.count()) {
-                sql = "SELECT CARD_PROMO.CARD_MOUNT,PRODUCT.PRODUCT_PROPOSED_WS_PRICE FROM CARD_PROMO "
-                      "INNER JOIN CARD_PROMO_PRD_SET ON CARD_PROMO.ID = CARD_PROMO_PRD_SET.CARD_PROMO_ID "
+                sql = "SELECT CARD_PROMO.CARD_AMOUNT "
+                      "FROM CARD_PROMO_PRD_SET "
+                      "INNER JOIN PRODUCT ON PRODUCT.PRODUCT_ID = CARD_PROMO_PRD_SET.PRODUCT_ID "
+                      "INNER JOIN CARD_PROMO ON CARD_PROMO.CARD_PROMO_ID = CARD_PROMO_PRD_SET.CARD_PROMO_ID "
                       "WHERE CARD_PROMO_PRD_SET.PRODUCT_ID = ?";
-                queryErp.prepare(sql);
-                queryErp.bindValue(0,strListProductID.at(i));
+                queryErp2.prepare(sql);
+                queryErp2.bindValue(0,strListProductID.at(i));
                 i++;
-                if (!queryErp.exec()) {
-                    QMessageBox::about(NULL,"ERROR",queryErp.lastError().text());
+                if (!queryErp2.exec()) {
+                    QMessageBox::about(NULL,"ERROR",queryErp2.lastError().text());
                 } else {
-                    double discount = queryErp.value(0).toDouble();
-                    double prix = queryErp.value(1).toDouble();
-                    creditAmount = creditAmount + iListPrdCnt.at(i) * prix * discount / 100;
+                    while (queryErp2.next()) {
+                        double discount = queryErp2.value(0).toDouble();
+                        creditAmount = creditAmount + iListPrdCnt.at(i) * dListPrdPrice.at(i) * discount / 100;
+                    }
                 }
             }
         }

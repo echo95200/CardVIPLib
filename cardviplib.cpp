@@ -519,7 +519,13 @@ void CardVIPLib::verifyUserSlot()
         QMessageBox::about(NULL,"ERROR","Database file cannot be opened!");
     } else {
 
-        sql = "SELECT CARD_ID FROM CARD WHERE CARD_ID = ? AND (CARD_PASSWORD IS NULL OR CARD_PASSWORD = ?)";
+        if (password.isEmpty()) {
+            sql = "SELECT CARD_ID FROM CARD WHERE CARD_ID = ? AND (CARD_PASSWORD IS NULL OR CARD_PASSWORD = ?)";
+        } else {
+            sql = "SELECT CARD_ID FROM CARD WHERE CARD_ID = ? AND CARD_PASSWORD = ?";
+        }
+
+        //sql = "SELECT CARD_ID FROM CARD WHERE CARD_ID = ? AND (CARD_PASSWORD IS NULL OR CARD_PASSWORD = ?)";
         query.prepare(sql);
         query.bindValue(0,cardID);
         query.bindValue(1,password);
